@@ -1,0 +1,149 @@
+{
+  "_BaseModal-B5ZAb5ea.js": {
+    "file": "assets/BaseModal-B5ZAb5ea.js",
+    "name": "BaseModal",
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js"
+    ]
+  },
+  "_axios-DCBug5Y9.js": {
+    "file": "assets/axios-DCBug5Y9.js",
+    "name": "axios"
+  },
+  "_fonts-C9MNnjVw.css": {
+    "file": "assets/fonts-C9MNnjVw.css",
+    "src": "_fonts-C9MNnjVw.css"
+  },
+  "_format--f093IF8.js": {
+    "file": "assets/format--f093IF8.js",
+    "name": "format"
+  },
+  "_instrument-sans-400-normal-D1W7dsQl.woff": {
+    "file": "assets/instrument-sans-400-normal-D1W7dsQl.woff",
+    "src": "_instrument-sans-400-normal-D1W7dsQl.woff"
+  },
+  "_instrument-sans-400-normal-DRC__1Mx.woff2": {
+    "file": "assets/instrument-sans-400-normal-DRC__1Mx.woff2",
+    "src": "_instrument-sans-400-normal-DRC__1Mx.woff2"
+  },
+  "_instrument-sans-500-normal-Dk9ku72i.woff2": {
+    "file": "assets/instrument-sans-500-normal-Dk9ku72i.woff2",
+    "src": "_instrument-sans-500-normal-Dk9ku72i.woff2"
+  },
+  "_instrument-sans-500-normal-Z6ESRlEs.woff": {
+    "file": "assets/instrument-sans-500-normal-Z6ESRlEs.woff",
+    "src": "_instrument-sans-500-normal-Z6ESRlEs.woff"
+  },
+  "_instrument-sans-600-normal-B7fBEWYG.woff2": {
+    "file": "assets/instrument-sans-600-normal-B7fBEWYG.woff2",
+    "src": "_instrument-sans-600-normal-B7fBEWYG.woff2"
+  },
+  "_instrument-sans-600-normal-B9e8oLYv.woff": {
+    "file": "assets/instrument-sans-600-normal-B9e8oLYv.woff",
+    "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DxvSrWUE.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Ba1EVxCI.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js"
+    ],
+    "dynamicImports": [
+      "resources/js/views/LoginView.vue",
+      "resources/js/layouts/AppLayout.vue",
+      "resources/js/views/DashboardView.vue",
+      "resources/js/views/ExpensesView.vue",
+      "resources/js/views/BillsView.vue",
+      "resources/js/views/CategoriesView.vue",
+      "resources/js/views/UsersView.vue"
+    ]
+  },
+  "resources/js/layouts/AppLayout.vue": {
+    "file": "assets/AppLayout-CHzkHaHf.js",
+    "name": "AppLayout",
+    "src": "resources/js/layouts/AppLayout.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js"
+    ]
+  },
+  "resources/js/views/BillsView.vue": {
+    "file": "assets/BillsView-BY7d2E_N.js",
+    "name": "BillsView",
+    "src": "resources/js/views/BillsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js",
+      "_BaseModal-B5ZAb5ea.js",
+      "_format--f093IF8.js"
+    ]
+  },
+  "resources/js/views/CategoriesView.vue": {
+    "file": "assets/CategoriesView-M7-PmqlO.js",
+    "name": "CategoriesView",
+    "src": "resources/js/views/CategoriesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js",
+      "_BaseModal-B5ZAb5ea.js"
+    ]
+  },
+  "resources/js/views/DashboardView.vue": {
+    "file": "assets/DashboardView-CayCvLwI.js",
+    "name": "DashboardView",
+    "src": "resources/js/views/DashboardView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "_format--f093IF8.js"
+    ]
+  },
+  "resources/js/views/ExpensesView.vue": {
+    "file": "assets/ExpensesView-DggmD4NV.js",
+    "name": "ExpensesView",
+    "src": "resources/js/views/ExpensesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js",
+      "_BaseModal-B5ZAb5ea.js",
+      "_format--f093IF8.js"
+    ]
+  },
+  "resources/js/views/LoginView.vue": {
+    "file": "assets/LoginView-oRN688YU.js",
+    "name": "LoginView",
+    "src": "resources/js/views/LoginView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js"
+    ]
+  },
+  "resources/js/views/UsersView.vue": {
+    "file": "assets/UsersView-DGonHpbW.js",
+    "name": "UsersView",
+    "src": "resources/js/views/UsersView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_axios-DCBug5Y9.js",
+      "resources/js/app.js",
+      "_BaseModal-B5ZAb5ea.js"
+    ]
+  }
+}
