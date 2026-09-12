@@ -20,6 +20,28 @@ const form = reactive({
     category_id: '', payment_method: '', notes: '',
 });
 
+// --- Receipt / camera state ---
+// The camera capture feature is only offered on phones. `capture="environment"`
+// opens the rear camera directly on mobile; on desktop it is meaningless, so we
+// hide the whole affordance there.
+const isMobile = detectMobile();
+const receiptFile = ref(null);       // File selected/captured this session
+const receiptPreview = ref(null);    // Object URL for the freshly picked file
+const existingReceiptUrl = ref(null); // Receipt already stored on the expense
+const removeReceipt = ref(false);    // Flag to detach an existing receipt
+const cameraInput = ref(null);       // Hidden <input capture> used by quick action
+
+function detectMobile() {
+    if (typeof navigator === 'undefined') return false;
+    const uaMobile = /Android|iPhone|iPad|iPod|Windows Phone|webOS|BlackBerry|Opera Mini|IEMobile/i
+        .test(navigator.userAgent);
+    const coarsePointer = typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(pointer: coarse)').matches;
+    const hasTouch = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+    return uaMobile || (coarsePointer && hasTouch);
+}
+
 const scopeLabels = { apartment: 'Apartamento', other: 'Outros' };
 
 async function loadCategories() {
@@ -42,13 +64,26 @@ async function load(page = 1) {
     }
 }
 
-function openCreate() {
-    editing.value = null;
-    errors.value = {};
+function resetReceiptState() {
+    if (receiptPreview.value) URL.revokeObjectURL(receiptPreview.value);
+    receiptFile.value = null;
+    receiptPreview.value = null;
+    existingReceiptUrl.value = null;
+    removeReceipt.value = false;
+}
+
+function resetForm() {
     Object.assign(form, {
         description: '', amount: '', spent_on: today(), scope: 'apartment',
         category_id: '', payment_method: '', notes: '',
     });
+}
+
+function openCreate() {
+    editing.value = null;
+    errors.value = {};
+    resetForm();
+    resetReceiptState();
     showModal.value = true;
 }
 
@@ -64,21 +99,74 @@ function openEdit(expense) {
         payment_method: expense.payment_method ?? '',
         notes: expense.notes ?? '',
     });
+    resetReceiptState();
+    existingReceiptUrl.value = expense.receipt_url ?? null;
     showModal.value = true;
+}
+
+// Quick action (mobile): tap the camera button, snap a photo, and jump straight
+// into a pre-filled "new expense" form with the receipt already attached.
+function startCameraCapture() {
+    cameraInput.value?.click();
+}
+
+function onReceiptSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // If we weren't already editing/creating, open a fresh create form.
+    if (!showModal.value) {
+        openCreate();
+    }
+
+    if (receiptPreview.value) URL.revokeObjectURL(receiptPreview.value);
+    receiptFile.value = file;
+    receiptPreview.value = URL.createObjectURL(file);
+    removeReceipt.value = false;
+    // Reset the input so selecting the same file again still fires change.
+    event.target.value = '';
+}
+
+function clearReceipt() {
+    if (receiptPreview.value) URL.revokeObjectURL(receiptPreview.value);
+    receiptFile.value = null;
+    receiptPreview.value = null;
+    // If there was a stored receipt, mark it for removal on save.
+    if (existingReceiptUrl.value) {
+        removeReceipt.value = true;
+        existingReceiptUrl.value = null;
+    }
+}
+
+function buildPayload() {
+    const fd = new FormData();
+    fd.append('description', form.description ?? '');
+    fd.append('amount', form.amount ?? '');
+    fd.append('spent_on', form.spent_on ?? '');
+    fd.append('scope', form.scope ?? '');
+    if (form.category_id) fd.append('category_id', form.category_id);
+    if (form.payment_method) fd.append('payment_method', form.payment_method);
+    if (form.notes) fd.append('notes', form.notes);
+    if (receiptFile.value) fd.append('receipt', receiptFile.value);
+    if (removeReceipt.value) fd.append('remove_receipt', '1');
+    return fd;
 }
 
 async function save() {
     saving.value = true;
     errors.value = {};
     try {
-        const payload = { ...form, category_id: form.category_id || null };
+        const fd = buildPayload();
         if (editing.value) {
-            await api.put(`/api/expenses/${editing.value.id}`, payload);
+            // Laravel reads multipart bodies only on POST, so spoof the method.
+            fd.append('_method', 'PUT');
+            await api.post(`/api/expenses/${editing.value.id}`, fd);
         } else {
-            await api.post('/api/expenses', payload);
+            await api.post('/api/expenses', fd);
         }
         showModal.value = false;
-        await load(pagination.current_page);
+        resetReceiptState();
+        await load(editing.value ? pagination.current_page : 1);
     } catch (e) {
         if (e?.response?.status === 422) errors.value = e.response.data.errors || {};
     } finally {
@@ -102,10 +190,35 @@ onMounted(() => { loadCategories(); load(); });
                 <h1 class="text-2xl font-bold text-slate-800">Despesas</h1>
                 <p class="text-sm text-slate-500">{{ pagination.total }} despesa(s) registada(s).</p>
             </div>
-            <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700" @click="openCreate">
-                + Nova despesa
-            </button>
+            <div class="flex items-center gap-2">
+                <!-- Mobile-only: capture a receipt photo straight from the camera. -->
+                <button
+                    v-if="isMobile"
+                    class="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                    @click="startCameraCapture"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Fotografar recibo
+                </button>
+                <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700" @click="openCreate">
+                    + Nova despesa
+                </button>
+            </div>
         </div>
+
+        <!-- Hidden camera input — only rendered on mobile. accept+capture opens the rear camera. -->
+        <input
+            v-if="isMobile"
+            ref="cameraInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            class="hidden"
+            @change="onReceiptSelected"
+        />
 
         <!-- Filters -->
         <div class="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -141,7 +254,22 @@ onMounted(() => { loadCategories(); load(); });
                     <tr v-else-if="!expenses.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">Sem despesas.</td></tr>
                     <tr v-for="e in expenses" :key="e.id" class="hover:bg-slate-50">
                         <td class="px-4 py-3">
-                            <p class="font-medium text-slate-800">{{ e.description }}</p>
+                            <p class="font-medium text-slate-800 flex items-center gap-1.5">
+                                <a
+                                    v-if="e.receipt_url"
+                                    :href="e.receipt_url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="text-emerald-600"
+                                    title="Ver recibo"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </a>
+                                {{ e.description }}
+                            </p>
                             <p v-if="e.notes" class="text-xs text-slate-400">{{ e.notes }}</p>
                         </td>
                         <td class="px-4 py-3">
@@ -224,6 +352,41 @@ onMounted(() => { loadCategories(); load(); });
                     <label class="mb-1 block text-sm font-medium text-slate-700">Notas</label>
                     <textarea v-model="form.notes" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
                 </div>
+
+                <!-- Receipt: capture available only on mobile; preview/removal always available. -->
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Recibo</label>
+                    <div class="flex items-center gap-3">
+                        <div v-if="receiptPreview || existingReceiptUrl" class="relative">
+                            <img
+                                :src="receiptPreview || existingReceiptUrl"
+                                alt="Recibo"
+                                class="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+                            />
+                            <button
+                                type="button"
+                                class="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
+                                title="Remover recibo"
+                                @click="clearReceipt"
+                            >×</button>
+                        </div>
+                        <button
+                            v-if="isMobile"
+                            type="button"
+                            class="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                            @click="startCameraCapture"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {{ (receiptPreview || existingReceiptUrl) ? 'Substituir' : 'Fotografar recibo' }}
+                        </button>
+                        <p v-else class="text-xs text-slate-400">A captura de recibo só está disponível no telemóvel.</p>
+                    </div>
+                    <p v-if="errors.receipt" class="mt-1 text-xs text-red-600">{{ errors.receipt[0] }}</p>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm" @click="showModal = false">Cancelar</button>
                     <button type="submit" :disabled="saving" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">

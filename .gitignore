@@ -6,10 +6,12 @@
 /storage/*.key
 /storage/pail
 
-# NOTE: /public/build and /vendor are intentionally NOT ignored.
-# This project deploys to shared hosting (GreenGeeks) via git, where npm and
-# composer cannot run, so the compiled frontend and PHP dependencies must be
-# committed so `git pull` brings them to the server.
+/vendor
+
+# NOTE: /public/build is intentionally NOT ignored.
+# This project deploys to shared hosting (GreenGeeks) via git, where npm
+# cannot run, so the compiled frontend must be committed so `git pull` brings
+# it to the server.
 .env
 .env.backup
 .env.production

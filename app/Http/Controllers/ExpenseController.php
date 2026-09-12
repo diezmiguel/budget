@@ -6,6 +6,7 @@ use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ExpenseController extends Controller
 {
@@ -41,10 +42,14 @@ class ExpenseController extends Controller
 
     public function store(ExpenseRequest $request): JsonResponse
     {
-        $expense = Expense::create([
-            ...$request->validated(),
-            'user_id' => $request->user()->id,
-        ]);
+        $data = $this->extractData($request);
+        $data['user_id'] = $request->user()->id;
+
+        if ($request->hasFile('receipt')) {
+            $data['receipt_path'] = $request->file('receipt')->store('receipts', 'public');
+        }
+
+        $expense = Expense::create($data);
 
         return response()->json($expense->load(['category', 'user']), 201);
     }
@@ -56,15 +61,47 @@ class ExpenseController extends Controller
 
     public function update(ExpenseRequest $request, Expense $expense): JsonResponse
     {
-        $expense->update($request->validated());
+        $data = $this->extractData($request);
+
+        if ($request->hasFile('receipt')) {
+            // Replace: remove the previous file before storing the new one.
+            $this->deleteReceipt($expense);
+            $data['receipt_path'] = $request->file('receipt')->store('receipts', 'public');
+        } elseif ($request->boolean('remove_receipt')) {
+            $this->deleteReceipt($expense);
+            $data['receipt_path'] = null;
+        }
+
+        $expense->update($data);
 
         return response()->json($expense->load(['category', 'user']));
     }
 
     public function destroy(Expense $expense): JsonResponse
     {
+        $this->deleteReceipt($expense);
         $expense->delete();
 
         return response()->json(['message' => 'Despesa removida.']);
+    }
+
+    /**
+     * Validated attributes that map directly to columns, excluding file/control fields.
+     *
+     * @return array<string, mixed>
+     */
+    private function extractData(ExpenseRequest $request): array
+    {
+        $data = $request->validated();
+        unset($data['receipt'], $data['remove_receipt']);
+
+        return $data;
+    }
+
+    private function deleteReceipt(Expense $expense): void
+    {
+        if ($expense->receipt_path) {
+            Storage::disk('public')->delete($expense->receipt_path);
+        }
     }
 }
