@@ -27,6 +27,7 @@ Route::middleware('web')->group(function () {
         Route::apiResource('categories', CategoryController::class);
         Route::post('expenses/scan-receipt', [ExpenseController::class, 'scanReceipt'])
             ->middleware('throttle:20,1');
+        Route::get('expenses/{expense}/receipt', [ExpenseController::class, 'receipt']);
         Route::apiResource('expenses', ExpenseController::class);
         Route::apiResource('bills', BillController::class);
         Route::patch('bills/{bill}/pay', [BillController::class, 'markPaid']);

@@ -156,7 +156,7 @@ function applySuggestions(s) {
     if (!s || typeof s !== 'object') return;
     const filled = [];
     if (s.description) { form.description = s.description; filled.push('descrição'); }
-    if (s.amount != null) { form.amount = s.amount; filled.push('valor'); }
+    if (s.amount != null) { form.amount = String(s.amount); filled.push('valor'); }
     if (s.spent_on) { form.spent_on = s.spent_on; filled.push('data'); }
     if (s.payment_method) { form.payment_method = s.payment_method; filled.push('pagamento'); }
     if (s.category_id != null) { form.category_id = s.category_id; filled.push('categoria'); }
@@ -177,10 +177,27 @@ function clearReceipt() {
     }
 }
 
+// Normalize the amount to a plain "1234.56" string the API accepts,
+// tolerating locale commas ("12,50") and stray currency/space characters.
+function normalizeAmount(value) {
+    if (value == null || value === '') return '';
+    let s = String(value).trim().replace(/[^\d.,-]/g, '');
+    // If both separators appear, assume the last one is the decimal separator.
+    if (s.includes(',') && s.includes('.')) {
+        s = s.lastIndexOf(',') > s.lastIndexOf('.')
+            ? s.replace(/\./g, '').replace(',', '.')
+            : s.replace(/,/g, '');
+    } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+    }
+    const n = Number.parseFloat(s);
+    return Number.isFinite(n) ? String(n) : '';
+}
+
 function buildPayload() {
     const fd = new FormData();
     fd.append('description', form.description ?? '');
-    fd.append('amount', form.amount ?? '');
+    fd.append('amount', normalizeAmount(form.amount));
     fd.append('spent_on', form.spent_on ?? '');
     fd.append('scope', form.scope ?? '');
     if (form.category_id) fd.append('category_id', form.category_id);
@@ -275,8 +292,8 @@ onMounted(() => { loadCategories(); load(); });
             <input v-model="filters.to" type="date" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" @change="load(1)" />
         </div>
 
-        <!-- Table -->
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <!-- Table (tablet/desktop) -->
+        <div class="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white sm:block">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
@@ -330,6 +347,59 @@ onMounted(() => { loadCategories(); load(); });
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Card list (mobile) -->
+        <div class="space-y-3 sm:hidden">
+            <p v-if="loading" class="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-slate-400">A carregar…</p>
+            <p v-else-if="!expenses.length" class="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-slate-400">Sem despesas.</p>
+            <div
+                v-for="e in expenses"
+                :key="e.id"
+                class="rounded-2xl border border-slate-200 bg-white p-4"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="flex items-center gap-1.5 font-semibold text-slate-800">
+                            <a
+                                v-if="e.receipt_url"
+                                :href="e.receipt_url"
+                                target="_blank"
+                                rel="noopener"
+                                class="shrink-0 text-emerald-600"
+                                title="Ver recibo"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </a>
+                            <span class="truncate">{{ e.description }}</span>
+                        </p>
+                        <p class="mt-0.5 text-xs text-slate-500">{{ formatDate(e.spent_on) }}</p>
+                    </div>
+                    <p class="shrink-0 text-lg font-bold text-slate-800">{{ formatCurrency(e.amount) }}</p>
+                </div>
+
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <span v-if="e.category" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+                        <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: e.category.color }" />
+                        {{ e.category.name }}
+                    </span>
+                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{{ scopeLabels[e.scope] }}</span>
+                </div>
+
+                <div class="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                    <button
+                        class="flex-1 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 active:bg-indigo-100"
+                        @click="openEdit(e)"
+                    >Editar</button>
+                    <button
+                        class="flex-1 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 active:bg-red-100"
+                        @click="remove(e)"
+                    >Remover</button>
+                </div>
+            </div>
         </div>
 
         <!-- Pagination -->

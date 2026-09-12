@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 class Expense extends Model
 {
@@ -38,12 +37,15 @@ class Expense extends Model
 
     /**
      * Public URL for the receipt image, or null when none is attached.
+     *
+     * Served through an authenticated app route (not the /storage symlink),
+     * so it works on shared hosting and keeps receipts private.
      */
     protected function receiptUrl(): Attribute
     {
         return Attribute::get(
             fn (): ?string => $this->receipt_path
-                ? Storage::disk('public')->url($this->receipt_path)
+                ? url("/api/expenses/{$this->id}/receipt")
                 : null,
         );
     }

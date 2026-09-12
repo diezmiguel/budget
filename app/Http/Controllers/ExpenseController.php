@@ -10,9 +10,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExpenseController extends Controller
 {
+    /**
+     * Disk used for receipt images. "local" is private (outside the web root),
+     * so files are streamed through the app rather than served via a symlink —
+     * this avoids the 403 issues that symlinked /storage causes on shared hosting.
+     */
+    private const RECEIPT_DISK = 'local';
+
     public function index(Request $request): JsonResponse
     {
         $query = Expense::query()->with(['category', 'user']);
@@ -73,7 +81,7 @@ class ExpenseController extends Controller
         $data['user_id'] = $request->user()->id;
 
         if ($request->hasFile('receipt')) {
-            $data['receipt_path'] = $request->file('receipt')->store('receipts', 'public');
+            $data['receipt_path'] = $request->file('receipt')->store('receipts', self::RECEIPT_DISK);
         }
 
         $expense = Expense::create($data);
@@ -86,6 +94,23 @@ class ExpenseController extends Controller
         return response()->json($expense->load(['category', 'user']));
     }
 
+    /**
+     * Stream a receipt image through the app (private disk, auth-protected).
+     */
+    public function receipt(Expense $expense): StreamedResponse
+    {
+        abort_if(! $expense->receipt_path, 404);
+
+        $disk = Storage::disk(self::RECEIPT_DISK);
+        abort_unless($disk->exists($expense->receipt_path), 404);
+
+        return $disk->response(
+            $expense->receipt_path,
+            null,
+            ['Cache-Control' => 'private, max-age=3600'],
+        );
+    }
+
     public function update(ExpenseRequest $request, Expense $expense): JsonResponse
     {
         $data = $this->extractData($request);
@@ -93,7 +118,7 @@ class ExpenseController extends Controller
         if ($request->hasFile('receipt')) {
             // Replace: remove the previous file before storing the new one.
             $this->deleteReceipt($expense);
-            $data['receipt_path'] = $request->file('receipt')->store('receipts', 'public');
+            $data['receipt_path'] = $request->file('receipt')->store('receipts', self::RECEIPT_DISK);
         } elseif ($request->boolean('remove_receipt')) {
             $this->deleteReceipt($expense);
             $data['receipt_path'] = null;
@@ -128,7 +153,7 @@ class ExpenseController extends Controller
     private function deleteReceipt(Expense $expense): void
     {
         if ($expense->receipt_path) {
-            Storage::disk('public')->delete($expense->receipt_path);
+            Storage::disk(self::RECEIPT_DISK)->delete($expense->receipt_path);
         }
     }
 }
