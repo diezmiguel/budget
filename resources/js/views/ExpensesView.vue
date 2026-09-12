@@ -47,7 +47,8 @@ function detectMobile() {
 const scopeLabels = { apartment: 'Apartamento', other: 'Outros' };
 
 async function loadCategories() {
-    const { data } = await api.get('/api/categories', { params: { type: 'expense' } });
+    // Show every category in the system, not just expense-typed ones.
+    const { data } = await api.get('/api/categories');
     categories.value = data;
 }
 
