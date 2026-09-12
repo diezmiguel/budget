@@ -1,6 +1,6 @@
 {
-  "_BaseModal-BR3hM0ar.js": {
-    "file": "assets/BaseModal-BR3hM0ar.js",
+  "_BaseModal-D00ESEmI.js": {
+    "file": "assets/BaseModal-D00ESEmI.js",
     "name": "BaseModal",
     "imports": [
       "_axios-DCBug5Y9.js",
@@ -44,7 +44,7 @@
     "src": "_instrument-sans-600-normal-B9e8oLYv.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-B6nqxr3D.css",
+    "file": "assets/app-VMCit5rM.css",
     "name": "app",
     "names": [
       "app.css"
@@ -53,7 +53,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-D9GJfi6c.js",
+    "file": "assets/app-C9mWNSCx.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -71,7 +71,7 @@
     ]
   },
   "resources/js/layouts/AppLayout.vue": {
-    "file": "assets/AppLayout-BMblWDMc.js",
+    "file": "assets/AppLayout-B7_aGvlM.js",
     "name": "AppLayout",
     "src": "resources/js/layouts/AppLayout.vue",
     "isDynamicEntry": true,
@@ -81,26 +81,26 @@
     ]
   },
   "resources/js/views/BillsView.vue": {
-    "file": "assets/BillsView--ZR452DK.js",
+    "file": "assets/BillsView-X6DwnZ3i.js",
     "name": "BillsView",
     "src": "resources/js/views/BillsView.vue",
     "isDynamicEntry": true,
     "imports": [
       "_axios-DCBug5Y9.js",
       "resources/js/app.js",
-      "_BaseModal-BR3hM0ar.js",
+      "_BaseModal-D00ESEmI.js",
       "_format--f093IF8.js"
     ]
   },
   "resources/js/views/CategoriesView.vue": {
-    "file": "assets/CategoriesView-BGYQt6ws.js",
+    "file": "assets/CategoriesView-DgEvGvOk.js",
     "name": "CategoriesView",
     "src": "resources/js/views/CategoriesView.vue",
     "isDynamicEntry": true,
     "imports": [
       "_axios-DCBug5Y9.js",
       "resources/js/app.js",
-      "_BaseModal-BR3hM0ar.js"
+      "_BaseModal-D00ESEmI.js"
     ]
   },
   "resources/js/views/DashboardView.vue": {
@@ -114,19 +114,19 @@
     ]
   },
   "resources/js/views/ExpensesView.vue": {
-    "file": "assets/ExpensesView-D0H0hxZ1.js",
+    "file": "assets/ExpensesView-BmCmaVR3.js",
     "name": "ExpensesView",
     "src": "resources/js/views/ExpensesView.vue",
     "isDynamicEntry": true,
     "imports": [
       "_axios-DCBug5Y9.js",
       "resources/js/app.js",
-      "_BaseModal-BR3hM0ar.js",
+      "_BaseModal-D00ESEmI.js",
       "_format--f093IF8.js"
     ]
   },
   "resources/js/views/LoginView.vue": {
-    "file": "assets/LoginView-BxFnn6fE.js",
+    "file": "assets/LoginView-CVUoZKyh.js",
     "name": "LoginView",
     "src": "resources/js/views/LoginView.vue",
     "isDynamicEntry": true,
@@ -136,14 +136,14 @@
     ]
   },
   "resources/js/views/UsersView.vue": {
-    "file": "assets/UsersView-cahWhC4c.js",
+    "file": "assets/UsersView-cnpNmTRy.js",
     "name": "UsersView",
     "src": "resources/js/views/UsersView.vue",
     "isDynamicEntry": true,
     "imports": [
       "_axios-DCBug5Y9.js",
       "resources/js/app.js",
-      "_BaseModal-BR3hM0ar.js"
+      "_BaseModal-D00ESEmI.js"
     ]
   }
 }

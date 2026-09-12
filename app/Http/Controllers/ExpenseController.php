@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ExpenseRequest;
+use App\Models\Category;
 use App\Models\Expense;
+use App\Services\ReceiptScanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class ExpenseController extends Controller
 {
@@ -38,6 +41,30 @@ class ExpenseController extends Controller
             ->paginate((int) $request->query('per_page', 20));
 
         return response()->json($expenses);
+    }
+
+    /**
+     * Read a receipt photo and return suggested field values (no persistence).
+     */
+    public function scanReceipt(Request $request, ReceiptScanService $scanner): JsonResponse
+    {
+        $validated = $request->validate([
+            'receipt' => ['required', 'image', 'mimes:jpeg,jpg,png,heic,heif,webp', 'max:8192'],
+        ]);
+
+        $categories = Category::query()
+            ->where('type', 'expense')
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
+            ->all();
+
+        try {
+            $suggestions = $scanner->scan($validated['receipt'], $categories);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
     }
 
     public function store(ExpenseRequest $request): JsonResponse

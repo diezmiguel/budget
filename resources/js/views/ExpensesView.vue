@@ -30,6 +30,8 @@ const receiptPreview = ref(null);    // Object URL for the freshly picked file
 const existingReceiptUrl = ref(null); // Receipt already stored on the expense
 const removeReceipt = ref(false);    // Flag to detach an existing receipt
 const cameraInput = ref(null);       // Hidden <input capture> used by quick action
+const scanning = ref(false);         // True while OpenAI reads the receipt
+const scanNotice = ref('');          // Feedback shown after a scan attempt
 
 function detectMobile() {
     if (typeof navigator === 'undefined') return false;
@@ -70,6 +72,8 @@ function resetReceiptState() {
     receiptPreview.value = null;
     existingReceiptUrl.value = null;
     removeReceipt.value = false;
+    scanning.value = false;
+    scanNotice.value = '';
 }
 
 function resetForm() {
@@ -125,6 +129,41 @@ function onReceiptSelected(event) {
     removeReceipt.value = false;
     // Reset the input so selecting the same file again still fires change.
     event.target.value = '';
+
+    // Read the receipt and pre-fill the form (user reviews before saving).
+    scanReceipt(file);
+}
+
+// Send the photo to the backend, which asks OpenAI to extract the fields.
+async function scanReceipt(file) {
+    scanning.value = true;
+    scanNotice.value = '';
+    try {
+        const fd = new FormData();
+        fd.append('receipt', file);
+        const { data } = await api.post('/api/expenses/scan-receipt', fd);
+        applySuggestions(data.suggestions);
+    } catch (e) {
+        scanNotice.value = e?.response?.data?.message
+            || 'Não foi possível ler o recibo. Preencha os campos manualmente.';
+    } finally {
+        scanning.value = false;
+    }
+}
+
+// Only overwrite fields the model actually returned; leave the rest untouched.
+function applySuggestions(s) {
+    if (!s || typeof s !== 'object') return;
+    const filled = [];
+    if (s.description) { form.description = s.description; filled.push('descrição'); }
+    if (s.amount != null) { form.amount = s.amount; filled.push('valor'); }
+    if (s.spent_on) { form.spent_on = s.spent_on; filled.push('data'); }
+    if (s.payment_method) { form.payment_method = s.payment_method; filled.push('pagamento'); }
+    if (s.category_id != null) { form.category_id = s.category_id; filled.push('categoria'); }
+
+    scanNotice.value = filled.length
+        ? `Campos preenchidos a partir do recibo: ${filled.join(', ')}. Reveja antes de guardar.`
+        : 'Não foi possível extrair dados do recibo. Preencha manualmente.';
 }
 
 function clearReceipt() {
@@ -384,13 +423,21 @@ onMounted(() => { loadCategories(); load(); });
                         </button>
                         <p v-else class="text-xs text-slate-400">A captura de recibo só está disponível no telemóvel.</p>
                     </div>
+                    <p v-if="scanning" class="mt-2 flex items-center gap-2 text-xs text-emerald-600">
+                        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        A ler o recibo…
+                    </p>
+                    <p v-else-if="scanNotice" class="mt-2 text-xs text-slate-500">{{ scanNotice }}</p>
                     <p v-if="errors.receipt" class="mt-1 text-xs text-red-600">{{ errors.receipt[0] }}</p>
                 </div>
 
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm" @click="showModal = false">Cancelar</button>
-                    <button type="submit" :disabled="saving" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
-                        {{ saving ? 'A guardar…' : 'Guardar' }}
+                    <button type="submit" :disabled="saving || scanning" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+                        {{ saving ? 'A guardar…' : (scanning ? 'A ler recibo…' : 'Guardar') }}
                     </button>
                 </div>
             </form>

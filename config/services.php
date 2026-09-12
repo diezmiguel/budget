@@ -14,6 +14,12 @@ return [
     |
     */
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        // Vision-capable model used to read receipt photos.
+        'receipt_model' => env('OPENAI_RECEIPT_MODEL', 'gpt-4o-mini'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

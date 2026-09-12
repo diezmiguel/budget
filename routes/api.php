@@ -25,6 +25,8 @@ Route::middleware('web')->group(function () {
 
         // Core resources available to both Admin and Manager.
         Route::apiResource('categories', CategoryController::class);
+        Route::post('expenses/scan-receipt', [ExpenseController::class, 'scanReceipt'])
+            ->middleware('throttle:20,1');
         Route::apiResource('expenses', ExpenseController::class);
         Route::apiResource('bills', BillController::class);
         Route::patch('bills/{bill}/pay', [BillController::class, 'markPaid']);
