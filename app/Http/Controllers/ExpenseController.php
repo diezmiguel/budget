@@ -96,18 +96,45 @@ class ExpenseController extends Controller
 
     /**
      * Stream a receipt image through the app (private disk, auth-protected).
+     *
+     * The Content-Type is set explicitly: the response carries
+     * X-Content-Type-Options: nosniff, so the browser will only render the
+     * bytes as an image when the MIME type is correct.
      */
     public function receipt(Expense $expense): StreamedResponse
     {
         abort_if(! $expense->receipt_path, 404);
 
+        // Serve from the current (private) disk, falling back to the legacy
+        // "public" disk for receipts uploaded before the storage switch.
         $disk = Storage::disk(self::RECEIPT_DISK);
-        abort_unless($disk->exists($expense->receipt_path), 404);
+        if (! $disk->exists($expense->receipt_path)) {
+            $legacy = Storage::disk('public');
+            abort_unless($legacy->exists($expense->receipt_path), 404);
+            $disk = $legacy;
+        }
+
+        $mime = $disk->mimeType($expense->receipt_path) ?: 'application/octet-stream';
+        // Fall back to the extension when the disk can't detect a usable image type.
+        if (! str_starts_with($mime, 'image/')) {
+            $mime = match (strtolower(pathinfo($expense->receipt_path, PATHINFO_EXTENSION))) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                'heic' => 'image/heic',
+                'heif' => 'image/heif',
+                default => $mime,
+            };
+        }
 
         return $disk->response(
             $expense->receipt_path,
-            null,
-            ['Cache-Control' => 'private, max-age=3600'],
+            basename($expense->receipt_path),
+            [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="'.basename($expense->receipt_path).'"',
+                'Cache-Control' => 'private, max-age=3600',
+            ],
         );
     }
 
