@@ -6,12 +6,26 @@ import { formatCurrency, formatDate, formatMonth } from '../lib/format';
 const data = ref(null);
 const loading = ref(true);
 const error = ref('');
+const period = ref('this_month');
+
+const periodOptions = [
+    { value: 'this_month', label: 'Este mês' },
+    { value: 'last_month', label: 'Mês passado' },
+    { value: 'last_3_months', label: 'Últimos 3 meses' },
+    { value: 'last_6_months', label: 'Últimos 6 meses' },
+    { value: 'this_year', label: 'Este ano' },
+    { value: 'all', label: 'Tudo' },
+];
+
+function periodLabel() {
+    return periodOptions.find((o) => o.value === period.value)?.label ?? '';
+}
 
 async function load() {
     loading.value = true;
     error.value = '';
     try {
-        const res = await api.get('/api/dashboard');
+        const res = await api.get('/api/dashboard', { params: { period: period.value } });
         data.value = res.data;
     } catch {
         error.value = 'Não foi possível carregar o painel.';
@@ -42,9 +56,21 @@ onMounted(load);
 
 <template>
     <div>
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">Painel</h1>
-            <p class="text-sm text-slate-500">Resumo das contas a pagar e das despesas do mês.</p>
+        <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Painel</h1>
+                <p class="text-sm text-slate-500">Resumo das contas a pagar e das despesas.</p>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-medium text-slate-500">Período das despesas</label>
+                <select
+                    v-model="period"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    @change="load"
+                >
+                    <option v-for="opt in periodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+            </div>
         </div>
 
         <div v-if="loading" class="py-20 text-center text-slate-400">A carregar…</div>
@@ -64,14 +90,17 @@ onMounted(load);
                     <p class="mt-1 text-xs text-slate-400">Total pendente: {{ formatCurrency(data.bills.pending_total) }}</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-white p-5">
-                    <p class="text-sm text-slate-500">Despesas do mês</p>
-                    <p class="mt-1 text-2xl font-bold text-slate-800">{{ formatCurrency(data.expenses.this_month) }}</p>
-                    <p class="mt-1 text-xs text-slate-400">Apartamento: {{ formatCurrency(data.expenses.apartment_this_month) }}</p>
+                    <p class="text-sm text-slate-500">Despesas · {{ periodLabel() }}</p>
+                    <p class="mt-1 text-2xl font-bold text-slate-800">{{ formatCurrency(data.expenses.range_total) }}</p>
+                    <p class="mt-1 text-xs text-slate-400">
+                        Apartamento: {{ formatCurrency(data.expenses.range_apartment) }}
+                        · Total registado: {{ formatCurrency(data.expenses.total) }}
+                    </p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-white p-5">
                     <p class="text-sm text-slate-500">Pago este mês</p>
                     <p class="mt-1 text-2xl font-bold text-emerald-600">{{ formatCurrency(data.bills.paid_this_month) }}</p>
-                    <p class="mt-1 text-xs text-slate-400">Outros gastos: {{ formatCurrency(data.expenses.other_this_month) }}</p>
+                    <p class="mt-1 text-xs text-slate-400">Outros gastos: {{ formatCurrency(data.expenses.range_other) }}</p>
                 </div>
             </div>
 
@@ -120,11 +149,11 @@ onMounted(load);
                 <div class="rounded-2xl border border-slate-200 bg-white">
                     <div class="border-b border-slate-100 px-5 py-4">
                         <h2 class="font-semibold text-slate-800">Despesas por categoria</h2>
-                        <p class="text-xs text-slate-400">Mês atual</p>
+                        <p class="text-xs text-slate-400">{{ periodLabel() }}</p>
                     </div>
                     <div class="space-y-3 p-5">
                         <p v-if="!data.expenses.by_category.length" class="py-6 text-center text-sm text-slate-400">
-                            Sem despesas este mês.
+                            Sem despesas no período.
                         </p>
                         <div v-for="cat in data.expenses.by_category" :key="cat.category">
                             <div class="mb-1 flex items-center justify-between text-sm">
